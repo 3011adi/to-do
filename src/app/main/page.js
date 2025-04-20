@@ -6,25 +6,69 @@ import {Session} from "@supabase/supabase-js"
 
 export default function Home() {
   const [newTask, setNewTask] = useState({ title: "", description: "" });
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState([]);  // Changed back to array since we're only showing one org
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editFormData, setEditFormData] = useState({ title: "", description: "" });
   const [session, setSession] = useState(null);
+  const [userOrg, setUserOrg] = useState(null);
   
-  const fetchTasks = async () => {
+  // Fetch user's organization name
+  const fetchUserOrg = async (email) => {
+    if (!email) return null;
+    
     try {
       const { data, error } = await supabase
-        .from("list")
-        .select("*")
-        .order("created_at", { ascending: true });
-
+        .from("user")
+        .select("name")
+        .eq("email", email)
+        .single();
+        
       if (error) {
-        console.error("Error reading tasks: ", error.message);
+        console.error("Error fetching user organization:", error.message);
+        return null;
+      }
+      
+      return data?.name || null;
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      return null;
+    }
+  };
+  
+  const fetchTasks = async () => {
+    if (!session?.user?.email || !userOrg) {
+      setTasks([]);
+      return;
+    }
+    
+    try {
+      // Get all users in this organization
+      const { data: orgUsers, error: orgUsersError } = await supabase
+        .from("user")
+        .select("email")
+        .eq("name", userOrg);
+        
+      if (orgUsersError) {
+        console.error("Error fetching organization users:", orgUsersError.message);
         return;
       }
+      
+      const orgEmails = orgUsers.map(user => user.email);
+      
+      // Get tasks for all users in this organization
+      const { data: taskData, error: taskError } = await supabase
+        .from("list")
+        .select("*")
+        .in("email", orgEmails)
+        .order("created_at", { ascending: true });
 
-      setTasks(data);
-      console.log("Fetched tasks:", data); // Log tasks to console
+      if (taskError) {
+        console.error("Error fetching tasks:", taskError.message);
+        return;
+      }
+      
+      setTasks(taskData);
+      console.log("Fetched tasks for organization:", taskData);
     } catch (err) {
       console.error("Unexpected error: ", err);
     }
@@ -73,17 +117,26 @@ export default function Home() {
 
   // Fetch tasks and session when component mounts
   useEffect(() => {
-    // Get the session
-    const getSession = async () => {
+    const getSessionAndUserData = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (session) {
         setSession(session);
+        
+        // Get user's organization
+        const orgName = await fetchUserOrg(session.user.email);
+        setUserOrg(orgName);
       }
     };
     
-    getSession();
-    fetchTasks();
+    getSessionAndUserData();
   }, []);
+  
+  // When userOrg changes, fetch tasks
+  useEffect(() => {
+    if (userOrg) {
+      fetchTasks();
+    }
+  }, [userOrg]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,6 +193,20 @@ export default function Home() {
     <div className="max-w-md mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Task Manager</h1>
       
+      {session?.user?.email && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+          <p className="text-sm text-gray-700">
+            Logged in as: <span className="font-medium">{session.user.email}</span>
+            {userOrg && (
+              <>
+                <br />
+                Organization: <span className="font-medium">{userOrg}</span>
+              </>
+            )}
+          </p>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="title" className="block text-sm font-medium mb-1">
@@ -180,9 +247,14 @@ export default function Home() {
       
       {/* Task List */}
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Your Tasks</h2>
-        {tasks.length === 0 ? (
-          <p className="text-gray-500">No tasks yet. Add one above!</p>
+        <h2 className="text-xl font-semibold mb-4">
+          {userOrg ? `Tasks for ${userOrg}` : 'Tasks'}
+        </h2>
+        
+        {!userOrg ? (
+          <p className="text-gray-500">No organization found for your account.</p>
+        ) : tasks.length === 0 ? (
+          <p className="text-gray-500">No tasks found for your organization.</p>
         ) : (
           <ul className="space-y-3">
             {tasks.map((task) => (
@@ -226,6 +298,7 @@ export default function Home() {
                     <div>
                       <h3 className="font-medium text-lg">{task.title}</h3>
                       <p className="text-gray-600 mt-1">{task.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Added by: {task.email}</p>
                     </div>
                     <div className="flex space-x-2">
                       <button
