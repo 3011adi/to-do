@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,7 +18,8 @@ const Auth = () => {
     setError('');
     
     if (isSignUp) {
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Sign up with email and password
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
@@ -27,11 +29,24 @@ const Auth = () => {
         setError(signUpError.message);
         setLoading(false);
         return;
-      } else {
-        console.log("Sign-up successful!");
-        router.push('/main');
       }
+
+      // Insert user data into the `user` table
+      const { error: insertError } = await supabase.from('user').insert([
+        { email, name }
+      ]);
+
+      if (insertError) {
+        console.error("Error inserting user data:", insertError.message);
+        setError(insertError.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log("Sign-up successful and user data inserted!");
+      router.push('/main');
     } else {
+      // Sign in with email and password
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -42,10 +57,10 @@ const Auth = () => {
         setError(signInError.message);
         setLoading(false);
         return;
-      } else {
-        console.log("Sign-in successful!");
-        router.push('/main');
       }
+
+      console.log("Sign-in successful!");
+      router.push('/main');
     }
     
     setLoading(false);
@@ -71,6 +86,21 @@ const Auth = () => {
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
+            {isSignUp && (
+              <div>
+                <label htmlFor="name" className="sr-only">Name</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  className="appearance-none rounded-md relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="sr-only">Email address</label>
               <input
@@ -143,4 +173,4 @@ const Auth = () => {
   );
 };
 
-export default Auth
+export default Auth;
