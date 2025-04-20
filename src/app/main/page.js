@@ -2,12 +2,14 @@
 import Image from "next/image";
 import { supabase } from "@/supabase-client";
 import { useState, useEffect } from "react";
+import {Session} from "@supabase/supabase-js"
 
 export default function Home() {
   const [newTask, setNewTask] = useState({ title: "", description: "" });
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editFormData, setEditFormData] = useState({ title: "", description: "" });
+  const [session, setSession] = useState(null);
   
   const fetchTasks = async () => {
     try {
@@ -69,15 +71,34 @@ export default function Home() {
     setEditingTaskId(null);
   };
 
-  // Fetch tasks when component mounts
+  // Fetch tasks and session when component mounts
   useEffect(() => {
+    // Get the session
+    const getSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (session) {
+        setSession(session);
+      }
+    };
+    
+    getSession();
     fetchTasks();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!session || !session.user) {
+      console.error("No active session found");
+      return;
+    }
+    
+    const taskWithEmail = {
+      ...newTask,
+      email: session.user.email
+    };
 
-    const { error } = await supabase.from("list").insert([newTask]).single();
+    const { error } = await supabase.from("list").insert([taskWithEmail]).single();
 
     if (error) {
       console.error("Error adding task: ", error.message);
