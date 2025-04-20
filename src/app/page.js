@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 export default function Home() {
   const [newTask, setNewTask] = useState({ title: "", description: "" });
   const [tasks, setTasks] = useState([]);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editFormData, setEditFormData] = useState({ title: "", description: "" });
   
   const fetchTasks = async () => {
     try {
@@ -26,6 +28,47 @@ export default function Home() {
     }
   };
 
+  // Start editing a task
+  const handleEditStart = (task) => {
+    setEditingTaskId(task.id);
+    setEditFormData({ title: task.title, description: task.description });
+  };
+
+  // Handle edit form changes
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Update task in database
+  const handleUpdate = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("list")
+        .update(editFormData)
+        .eq("id", id);
+      
+      if (error) {
+        console.error("Error updating task:", error.message);
+        return;
+      }
+      
+      // Exit edit mode and refresh tasks
+      setEditingTaskId(null);
+      fetchTasks();
+    } catch (err) {
+      console.error("Unexpected error during update:", err);
+    }
+  };
+
+  // Cancel editing
+  const handleEditCancel = () => {
+    setEditingTaskId(null);
+  };
+
   // Fetch tasks when component mounts
   useEffect(() => {
     fetchTasks();
@@ -43,6 +86,25 @@ export default function Home() {
     
     // Refresh tasks after adding a new one
     fetchTasks();
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const { error } = await supabase
+        .from("list")
+        .delete()
+        .eq("id", id);
+      
+      if (error) {
+        console.error("Error deleting task:", error.message);
+        return;
+      }
+      
+      // Refresh tasks after deletion
+      fetchTasks();
+    } catch (err) {
+      console.error("Unexpected error during deletion:", err);
+    }
   };
   
   const handleChange = (e) => {
@@ -105,10 +167,61 @@ export default function Home() {
             {tasks.map((task) => (
               <li 
                 key={task.id} 
-                className="border border-gray-300 rounded-md p-4 bg-white shadow-sm"
+                className="border border-gray-300 rounded-md p-4 bg-white shadow-sm flex justify-between items-start"
               >
-                <h3 className="font-medium text-lg">{task.title}</h3>
-                <p className="text-gray-600 mt-1">{task.description}</p>
+                {editingTaskId === task.id ? (
+                  <div className="w-full">
+                    <input
+                      type="text"
+                      name="title"
+                      value={editFormData.title}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
+                    />
+                    <textarea
+                      name="description"
+                      value={editFormData.description}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
+                      rows="3"
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleUpdate(task.id)}
+                        className="bg-green-500 text-white px-2 py-1 rounded-md hover:bg-green-600 text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleEditCancel}
+                        className="bg-gray-500 text-white px-2 py-1 rounded-md hover:bg-gray-600 text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-start w-full">
+                    <div>
+                      <h3 className="font-medium text-lg">{task.title}</h3>
+                      <p className="text-gray-600 mt-1">{task.description}</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleEditStart(task)}
+                        className="bg-yellow-500 text-white px-2 py-1 rounded-md hover:bg-yellow-600 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(task.id)}
+                        className="bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
