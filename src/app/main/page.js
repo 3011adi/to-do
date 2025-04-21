@@ -39,7 +39,8 @@ export default function Home() {
   const [aiSummary, setAiSummary] = useState("");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [chartData, setChartData] = useState(null);
-  
+  const [orgMembers, setOrgMembers] = useState([]);
+
   // Fetch user's organization name
   const fetchUserOrg = async (email) => {
     if (!email) return null;
@@ -99,6 +100,27 @@ export default function Home() {
       console.log("Fetched tasks for organization:", taskData);
     } catch (err) {
       console.error("Unexpected error: ", err);
+    }
+  };
+
+  // Fetch organization members
+  const fetchOrgMembers = async () => {
+    if (!userOrg) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("user")
+        .select("email, name")
+        .eq("name", userOrg);
+        
+      if (error) {
+        console.error("Error fetching organization members:", error.message);
+        return;
+      }
+      
+      setOrgMembers(data || []);
+    } catch (err) {
+      console.error("Unexpected error fetching members:", err);
     }
   };
 
@@ -206,10 +228,11 @@ export default function Home() {
     getSessionAndUserData();
   }, []);
   
-  // When userOrg changes, fetch tasks
+  // When userOrg changes, fetch tasks and members
   useEffect(() => {
     if (userOrg) {
       fetchTasks();
+      fetchOrgMembers();
     }
   }, [userOrg]);
 
@@ -275,29 +298,24 @@ export default function Home() {
   return (
     <div className="bg-amber-50 min-h-screen p-4" style={{backgroundImage: "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEGSURBVGhD7ZdBCsIwFEXTrrrXLQii4LLc/8YFqdZf6DiIQvO/9cDblCTtgZtpm/Sqqqqqqqqqqqo3zuPiG3SZX16XWdgZdJEXkXdEFMaJ9tZyMhRTOOmg5yCyQB+JLBipSAuO37xyJsPZI18R4YwsgJeRwXCqLzPy3N8+LlsYCqeGYiMX3sOlJ2ZGhpdmRkQBGrEMIgvQiJURUYBGLI2IAjRibUQUoBEfIy5yJMST6Dvzw3GQzciNJX1RjCXfkQcHr2oN+0wZE+B2aLDQjBg42IoYDG0NDBiL5FcZ5LHJuMvQQNKTMNpEyTvQOZgUGRmv+jTkXwVEFnBHRJHHicDhExBZQFVVVVVVVVW9KaVe9/iBnV2iJ3IAAAAASUVORK5CYII=')", backgroundRepeat: "repeat"}}>
       <div className="max-w-7xl mx-auto">
-        {/* Notebook-style header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 bg-amber-900 p-3 sm:p-4 rounded-xl border-l-8 border-amber-700 shadow-md">
-          <div className="flex flex-wrap items-center mb-2 sm:mb-0">
-            <h1 className="text-xl sm:text-2xl font-mono text-amber-100 mr-2">Task Notebook</h1>
-            {tasks.length > 0 && (
-              <span className="mt-1 sm:mt-0 bg-amber-800 text-amber-100 px-2 sm:px-3 py-1 rounded-full border border-amber-600 text-xs sm:text-sm font-mono">
-                {tasks.length} total {tasks.length === 1 ? 'note' : 'notes'}
-              </span>
-            )}
-          </div>
+        {/* Responsive Navbar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 bg-amber-900 p-4 rounded-xl border-l-8 border-amber-700 shadow-md">
+          <h1 className="text-xl sm:text-2xl font-mono text-amber-100 mb-3 sm:mb-0">Task Notebook</h1>
           
           {session?.user?.email && (
-            <div className="text-left sm:text-right w-full sm:w-auto flex flex-wrap justify-end items-center">
-              <p className="text-xs sm:text-sm font-mono text-amber-200 flex flex-wrap items-center mr-3">
-                <span className="font-medium truncate max-w-[200px] sm:max-w-none">{session.user.email}</span>
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3">
+              <div className="flex items-center">
+                <span className="font-mono text-amber-200 text-sm truncate max-w-[180px] sm:max-w-none">
+                  {session.user.email}
+                </span>
                 {userOrg && (
-                  <span className="mt-1 sm:mt-0 sm:ml-2 bg-amber-800 text-amber-100 px-2 py-1 rounded-lg text-xs border border-amber-600 inline-block">
+                  <span className="ml-2 bg-amber-800 text-amber-100 px-2 py-0.5 rounded-lg text-xs border border-amber-600">
                     {userOrg}
                   </span>
                 )}
-              </p>
+              </div>
               <Link href="/main/organizations">
-                <button className="bg-amber-700 hover:bg-amber-800 text-amber-100 px-3 py-1.5 rounded-lg border border-amber-600 font-mono text-xs sm:text-sm transition shadow-sm">
+                <button className="bg-amber-700 hover:bg-amber-800 text-amber-100 px-3 py-1.5 rounded-lg border border-amber-600 font-mono text-xs sm:text-sm transition shadow-sm w-full sm:w-auto">
                   Organizations
                 </button>
               </Link>
@@ -305,71 +323,126 @@ export default function Home() {
           )}
         </div>
         
-        {/* Task Creation Chart */}
+        {/* Notes Activity and Org Stats Section */}
         {chartData && tasks.length > 0 && (
-          <div className="mb-6 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
-            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
-              <h2 className="text-xl">Notes Activity</h2>
-            </div>
-            <div className="p-6 bg-amber-50">
-              <div className="h-64 w-full">
-                <Bar 
-                  data={chartData}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'top',
-                        labels: {
-                          font: {
-                            family: 'monospace'
-                          }
-                        }
-                      },
-                      title: {
-                        display: true,
-                        text: 'Notes Created Over Time',
-                        font: {
-                          family: 'monospace',
-                          size: 16
-                        }
-                      },
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        ticks: {
-                          stepSize: 1,
-                          font: {
-                            family: 'monospace'
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Notes Activity Chart - Now takes 2 columns */}
+            <div className="md:col-span-2 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+              <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
+                <h2 className="text-xl">Notes Activity</h2>
+              </div>
+              <div className="p-6 bg-amber-50">
+                <div className="h-64 w-full">
+                  <Bar 
+                    data={chartData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                          labels: {
+                            font: {
+                              family: 'monospace'
+                            }
                           }
                         },
                         title: {
                           display: true,
-                          text: 'Number of Notes',
+                          text: 'Notes Created Over Time',
                           font: {
-                            family: 'monospace'
-                          }
-                        }
-                      },
-                      x: {
-                        ticks: {
-                          font: {
-                            family: 'monospace'
+                            family: 'monospace',
+                            size: 16
                           }
                         },
-                        title: {
-                          display: true,
-                          text: 'Date Created',
-                          font: {
-                            family: 'monospace'
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          ticks: {
+                            stepSize: 1,
+                            font: {
+                              family: 'monospace'
+                            }
+                          },
+                          title: {
+                            display: true,
+                            text: 'Number of Notes',
+                            font: {
+                              family: 'monospace'
+                            }
+                          }
+                        },
+                        x: {
+                          ticks: {
+                            font: {
+                              family: 'monospace'
+                            }
+                          },
+                          title: {
+                            display: true,
+                            text: 'Date Created',
+                            font: {
+                              family: 'monospace'
+                            }
                           }
                         }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Organization Stats - Takes 1 column */}
+            <div className="md:col-span-1 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+              <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
+                <h2 className="text-xl">Organization Stats</h2>
+              </div>
+              <div className="p-6 bg-amber-50">
+                <div className="bg-amber-100/60 p-4 rounded-lg border-l-4 border-amber-600 font-mono">
+                  <div className="space-y-4">
+                    {/* Org Name */}
+                    <div>
+                      <h3 className="text-amber-900 font-bold text-lg border-b border-amber-300 pb-1">
+                        {userOrg || "No Organization"}
+                      </h3>
+                    </div>
+                    
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-amber-200/60 p-3 rounded-lg">
+                        <p className="text-lg font-bold text-amber-800">{tasks.length}</p>
+                        <p className="text-sm text-amber-700">Notes</p>
+                      </div>
+                      <div className="bg-amber-200/60 p-3 rounded-lg">
+                        <p className="text-lg font-bold text-amber-800">{orgMembers.length}</p>
+                        <p className="text-sm text-amber-700">Members</p>
+                      </div>
+                    </div>
+                    
+                    {/* Member List */}
+                    <div>
+                      <h4 className="font-bold text-amber-800 border-b border-amber-300 pb-1 mb-2">
+                        Team Members
+                      </h4>
+                      {orgMembers.length > 0 ? (
+                        <ul className="max-h-[200px] overflow-y-auto pr-2">
+                          {orgMembers.map((member, index) => (
+                            <li key={index} className="flex items-center py-1 border-b border-amber-200 last:border-b-0">
+                              <span className="bg-amber-700 text-amber-100 w-8 h-8 rounded-full flex items-center justify-center mr-2">
+                                {member.email.substring(0, 1).toUpperCase()}
+                              </span>
+                              <span className="text-amber-800 text-sm truncate">{member.email}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-amber-700 text-sm italic">No members found</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
