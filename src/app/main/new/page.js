@@ -34,7 +34,7 @@ export default function NewTask() {
     const taskWithEmail = {
       ...newTask,
       email: session.user.email,
-      summary: summary // Include the AI summary if available
+     
     };
 
     const { error } = await supabase.from("list").insert([taskWithEmail]);

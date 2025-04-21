@@ -2,6 +2,33 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/supabase-client";
 import Link from "next/link";
+import { 
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale
+);
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
@@ -11,6 +38,7 @@ export default function Home() {
   const [userOrg, setUserOrg] = useState(null);
   const [aiSummary, setAiSummary] = useState("");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [chartData, setChartData] = useState(null);
   
   // Fetch user's organization name
   const fetchUserOrg = async (email) => {
@@ -114,6 +142,53 @@ export default function Home() {
   const handleEditCancel = () => {
     setEditingTaskId(null);
   };
+
+  // Process task data for chart visualization
+  const processChartData = () => {
+    if (!tasks || tasks.length === 0) {
+      setChartData(null);
+      return;
+    }
+
+    // Sort tasks by creation date
+    const sortedTasks = [...tasks].sort((a, b) => 
+      new Date(a.created_at) - new Date(b.created_at)
+    );
+
+    // Extract dates and create task count by date
+    const dates = {};
+    sortedTasks.forEach(task => {
+      // Format date as YYYY-MM-DD
+      const dateStr = new Date(task.created_at).toISOString().split('T')[0];
+      
+      if (!dates[dateStr]) {
+        dates[dateStr] = 0;
+      }
+      dates[dateStr] += 1;
+    });
+
+    // Prepare chart data
+    const chartData = {
+      labels: Object.keys(dates),
+      datasets: [
+        {
+          label: 'Notes Created',
+          data: Object.values(dates),
+          backgroundColor: 'rgba(180, 83, 9, 0.6)',
+          borderColor: 'rgba(146, 64, 14, 1)',
+          borderWidth: 2,
+          borderRadius: 4,
+        }
+      ],
+    };
+    
+    setChartData(chartData);
+  };
+  
+  // Update chart data when tasks change
+  useEffect(() => {
+    processChartData();
+  }, [tasks]);
 
   // Fetch tasks and session when component mounts
   useEffect(() => {
@@ -224,6 +299,76 @@ export default function Home() {
             </div>
           )}
         </div>
+        
+        {/* Task Creation Chart */}
+        {chartData && tasks.length > 0 && (
+          <div className="mb-6 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
+              <h2 className="text-xl">Notes Activity</h2>
+            </div>
+            <div className="p-6 bg-amber-50">
+              <div className="h-64 w-full">
+                <Bar 
+                  data={chartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'top',
+                        labels: {
+                          font: {
+                            family: 'monospace'
+                          }
+                        }
+                      },
+                      title: {
+                        display: true,
+                        text: 'Notes Created Over Time',
+                        font: {
+                          family: 'monospace',
+                          size: 16
+                        }
+                      },
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        ticks: {
+                          stepSize: 1,
+                          font: {
+                            family: 'monospace'
+                          }
+                        },
+                        title: {
+                          display: true,
+                          text: 'Number of Notes',
+                          font: {
+                            family: 'monospace'
+                          }
+                        }
+                      },
+                      x: {
+                        ticks: {
+                          font: {
+                            family: 'monospace'
+                          }
+                        },
+                        title: {
+                          display: true,
+                          text: 'Date Created',
+                          font: {
+                            family: 'monospace'
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* AI Summary Section - Now takes 1 column on desktop */}
