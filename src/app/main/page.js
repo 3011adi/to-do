@@ -276,22 +276,22 @@ export default function Home() {
     <div className="bg-amber-50 min-h-screen p-4" style={{backgroundImage: "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEGSURBVGhD7ZdBCsIwFEXTrrrXLQii4LLc/8YFqdZf6DiIQvO/9cDblCTtgZtpm/Sqqqqqqqqqqqo3zuPiG3SZX16XWdgZdJEXkXdEFMaJ9tZyMhRTOOmg5yCyQB+JLBipSAuO37xyJsPZI18R4YwsgJeRwXCqLzPy3N8+LlsYCqeGYiMX3sOlJ2ZGhpdmRkQBGrEMIgvQiJURUYBGLI2IAjRibUQUoBEfIy5yJMST6Dvzw3GQzciNJX1RjCXfkQcHr2oN+0wZE+B2aLDQjBg42IoYDG0NDBiL5FcZ5LHJuMvQQNKTMNpEyTvQOZgUGRmv+jTkXwVEFnBHRJHHicDhExBZQFVVVVVVVVW9KaVe9/iBnV2iJ3IAAAAASUVORK5CYII=')", backgroundRepeat: "repeat"}}>
       <div className="max-w-7xl mx-auto">
         {/* Notebook-style header */}
-        <div className="flex items-center justify-between mb-6 bg-amber-900 p-4 rounded-xl border-l-8 border-amber-700 shadow-md">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-mono text-amber-100">Task Notebook</h1>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 bg-amber-900 p-3 sm:p-4 rounded-xl border-l-8 border-amber-700 shadow-md">
+          <div className="flex flex-wrap items-center mb-2 sm:mb-0">
+            <h1 className="text-xl sm:text-2xl font-mono text-amber-100 mr-2">Task Notebook</h1>
             {tasks.length > 0 && (
-              <span className="ml-3 bg-amber-800 text-amber-100 px-3 py-1 rounded-full border border-amber-600 text-sm font-mono">
+              <span className="mt-1 sm:mt-0 bg-amber-800 text-amber-100 px-2 sm:px-3 py-1 rounded-full border border-amber-600 text-xs sm:text-sm font-mono">
                 {tasks.length} total {tasks.length === 1 ? 'note' : 'notes'}
               </span>
             )}
           </div>
           
           {session?.user?.email && (
-            <div className="text-right">
-              <p className="text-sm font-mono text-amber-200">
-                <span className="font-medium">{session.user.email}</span>
+            <div className="text-left sm:text-right w-full sm:w-auto">
+              <p className="text-xs sm:text-sm font-mono text-amber-200 flex flex-wrap items-center">
+                <span className="font-medium truncate max-w-[200px] sm:max-w-none">{session.user.email}</span>
                 {userOrg && (
-                  <span className="ml-2 bg-amber-800 text-amber-100 px-2 py-1 rounded-lg text-xs border border-amber-600">
+                  <span className="mt-1 sm:mt-0 sm:ml-2 bg-amber-800 text-amber-100 px-2 py-1 rounded-lg text-xs border border-amber-600 inline-block">
                     {userOrg}
                   </span>
                 )}
@@ -420,7 +420,11 @@ export default function Home() {
               </Link>
             </div>
             
-            <div className="p-4" style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px"}}>
+            <div className="p-4 overflow-y-auto" style={{
+              backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", 
+              backgroundSize: "100% 24px",
+              maxHeight: "500px"
+            }}>
               {!userOrg ? (
                 <div className="text-center py-8 font-mono text-amber-800">
                   <p>No organization found for your account.</p>
