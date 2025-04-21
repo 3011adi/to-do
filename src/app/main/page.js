@@ -287,8 +287,8 @@ export default function Home() {
           </div>
           
           {session?.user?.email && (
-            <div className="text-left sm:text-right w-full sm:w-auto">
-              <p className="text-xs sm:text-sm font-mono text-amber-200 flex flex-wrap items-center">
+            <div className="text-left sm:text-right w-full sm:w-auto flex flex-wrap justify-end items-center">
+              <p className="text-xs sm:text-sm font-mono text-amber-200 flex flex-wrap items-center mr-3">
                 <span className="font-medium truncate max-w-[200px] sm:max-w-none">{session.user.email}</span>
                 {userOrg && (
                   <span className="mt-1 sm:mt-0 sm:ml-2 bg-amber-800 text-amber-100 px-2 py-1 rounded-lg text-xs border border-amber-600 inline-block">
@@ -296,6 +296,11 @@ export default function Home() {
                   </span>
                 )}
               </p>
+              <Link href="/main/organizations">
+                <button className="bg-amber-700 hover:bg-amber-800 text-amber-100 px-3 py-1.5 rounded-lg border border-amber-600 font-mono text-xs sm:text-sm transition shadow-sm">
+                  Organizations
+                </button>
+              </Link>
             </div>
           )}
         </div>
