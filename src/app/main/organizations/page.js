@@ -8,6 +8,9 @@ export default function OrganizationWall() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState(null);
   const [userOrg, setUserOrg] = useState(null);
+  const [expandedOrg, setExpandedOrg] = useState(null);
+  const [orgDetails, setOrgDetails] = useState({});
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Fetch user session
   useEffect(() => {
@@ -100,6 +103,54 @@ export default function OrganizationWall() {
     }
   }, [session, userOrg]);
 
+  // Handle organization click
+  const handleOrgClick = async (orgName) => {
+    // Toggle expanded state
+    if (expandedOrg === orgName) {
+      setExpandedOrg(null);
+      return;
+    }
+    
+    setExpandedOrg(orgName);
+    setLoadingDetails(true);
+    
+    try {
+      // Fetch organization members
+      const { data: members, error: membersError } = await supabase
+        .from("user")
+        .select("email, name")
+        .eq("name", orgName);
+        
+      if (membersError) {
+        console.error("Error fetching organization members:", membersError.message);
+        return;
+      }
+      
+      // Fetch notes for each member
+      const memberDetails = await Promise.all(members.map(async (member) => {
+        const { data: notes, error: notesError } = await supabase
+          .from("list")
+          .select("id, title, created_at")
+          .eq("email", member.email)
+          .order("created_at", { ascending: false });
+          
+        return {
+          email: member.email,
+          notes: notes || []
+        };
+      }));
+      
+      setOrgDetails({
+        ...orgDetails,
+        [orgName]: memberDetails
+      });
+    } catch (err) {
+      console.error("Error fetching organization details:", err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   return (
     <div className="bg-amber-50 min-h-screen p-4" style={{backgroundImage: "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEGSURBVGhD7ZdBCsIwFEXTrrrXLQii4LLc/8YFqdZf6DiIQvO/9cDblCTtgZtpm/Sqqqqqqqqqqqo3zuPiG3SZX16XWdgZdJEXkXdEFMaJ9tZyMhRTOOmg5yCyQB+JLBipSAuO37xyJsPZI18R4YwsgJeRwXCqLzPy3N8+LlsYCqeGYiMX3sOlJ2ZGhpdmRkQBGrEMIgvQiJURUYBGLI2IAjRibUQUoBEfIy5yJMST6Dvzw3GQzciNJX1RjCXfkQcHr2oN+0wZE+B2aLDQjBg42IoYDG0NDBiL5FcZ5LHJuMvQQNKTMNpEyTvQOZgUGRmv+jTkXwVEFnBHRJHHicDhExBZQFVVVVVVVVW9KaVe9/iBnV2iJ3IAAAAASUVORK5CYII=')", backgroundRepeat: "repeat"}}>
       <div className="max-w-7xl mx-auto">
@@ -136,28 +187,79 @@ export default function OrganizationWall() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {organizations.map((org) => (
-                  <div 
-                    key={org.name} 
-                    className={`p-4 rounded-lg shadow-md border-l-4 ${
-                      org.isCurrentUserOrg ? 'border-amber-600 bg-amber-50' : 'border-amber-400 bg-amber-50/70'
-                    }`}
-                  >
-                    <h3 className="font-bold text-lg text-amber-900 font-mono flex items-center justify-between">
-                      {org.name}
-                      {org.isCurrentUserOrg && (
-                        <span className="text-xs bg-amber-600 text-white px-2 py-1 rounded-full ml-2">
-                          Your Org
-                        </span>
-                      )}
-                    </h3>
-                    <div className="mt-2 font-mono text-sm">
-                      <p className="text-amber-800">
-                        <span className="font-medium">Members:</span> {org.memberCount}
-                      </p>
-                      <p className="text-amber-800">
-                        <span className="font-medium">Notes:</span> {org.taskCount}
-                      </p>
+                  <div key={org.name} className="flex flex-col">
+                    <div 
+                      onClick={() => handleOrgClick(org.name)}
+                      className={`p-4 rounded-lg shadow-md border-l-4 ${
+                        org.isCurrentUserOrg ? 'border-amber-600 bg-amber-50' : 'border-amber-400 bg-amber-50/70'
+                      } cursor-pointer hover:bg-amber-100 transition duration-200 mb-1`}
+                    >
+                      <h3 className="font-bold text-lg text-amber-900 font-mono flex items-center justify-between">
+                        {org.name}
+                        {org.isCurrentUserOrg && (
+                          <span className="text-xs bg-amber-600 text-white px-2 py-1 rounded-full ml-2">
+                            Your Org
+                          </span>
+                        )}
+                      </h3>
+                      <div className="mt-2 font-mono text-sm">
+                        <p className="text-amber-800">
+                          <span className="font-medium">Members:</span> {org.memberCount}
+                        </p>
+                        <p className="text-amber-800">
+                          <span className="font-medium">Notes:</span> {org.taskCount}
+                        </p>
+                      </div>
+                      <div className="mt-2 text-amber-800 text-xs text-right italic">
+                        Click to {expandedOrg === org.name ? 'hide' : 'show'} details
+                      </div>
                     </div>
+                    
+                    {/* Expanded organization details */}
+                    {expandedOrg === org.name && (
+                      <div className="bg-amber-50 p-3 rounded-lg shadow border border-amber-300 mb-4 overflow-y-auto max-h-80">
+                        <h4 className="font-bold text-amber-900 border-b border-amber-300 pb-1 mb-2 font-mono">
+                          {org.name} - Member Details
+                        </h4>
+                        
+                        {loadingDetails ? (
+                          <div className="text-center py-4 text-amber-800 font-mono text-sm">
+                            <p>Loading organization details...</p>
+                          </div>
+                        ) : orgDetails[org.name]?.length > 0 ? (
+                          <div className="space-y-3">
+                            {orgDetails[org.name].map(member => (
+                              <div key={member.email} className="bg-amber-100/50 p-2 rounded border-l-2 border-amber-500">
+                                <p className="font-mono text-sm font-medium text-amber-900">{member.email}</p>
+                                {member.notes.length > 0 ? (
+                                  <div className="mt-1 ml-2">
+                                    <p className="text-xs font-mono text-amber-700 mb-1">{member.notes.length} notes:</p>
+                                    <ul className="list-disc list-inside">
+                                      {member.notes.slice(0, 3).map(note => (
+                                        <li key={note.id} className="text-xs font-mono text-amber-800 truncate">
+                                          {note.title}
+                                        </li>
+                                      ))}
+                                      {member.notes.length > 3 && (
+                                        <li className="text-xs font-mono text-amber-700 italic">
+                                          +{member.notes.length - 3} more notes...
+                                        </li>
+                                      )}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs font-mono text-amber-700 mt-1 ml-2 italic">No notes</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-2 text-amber-800 font-mono text-sm">
+                            <p>No members found for this organization.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
