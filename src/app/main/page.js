@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from "react";
 import { supabase } from "@/supabase-client";
+import Link from "next/link";
 
 export default function Home() {
-  const [newTask, setNewTask] = useState({ title: "", description: "" });
   const [tasks, setTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editFormData, setEditFormData] = useState({ title: "", description: "" });
@@ -136,30 +136,6 @@ export default function Home() {
     }
   }, [userOrg]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!session || !session.user) {
-      console.error("No active session found");
-      return;
-    }
-    
-    const taskWithEmail = {
-      ...newTask,
-      email: session.user.email
-    };
-
-    const { error } = await supabase.from("list").insert([taskWithEmail]).single();
-
-    if (error) {
-      console.error("Error adding task: ", error.message);
-    }
-    setNewTask({ title: "", description: "" });
-    
-    // Refresh tasks after adding a new one
-    fetchTasks();
-  };
-
   const handleDelete = async (id) => {
     try {
       const { error } = await supabase
@@ -177,14 +153,6 @@ export default function Home() {
     } catch (err) {
       console.error("Unexpected error during deletion:", err);
     }
-  };
-  
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNewTask((prev) => ({
-      ...prev,
-      [name]: value
-    }));
   };
   
   return (
@@ -208,60 +176,18 @@ export default function Home() {
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* New Task Form - Left Column */}
-          <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden" style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px"}}>
-            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
-              <h2 className="text-xl">New Note</h2>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label htmlFor="title" className="block text-sm font-mono mb-1 text-amber-900">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  id="title"
-                  name="title"
-                  value={newTask.title}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-amber-50 border-b-2 border-amber-700 focus:border-amber-800 focus:outline-none transition-colors font-mono rounded-lg"
-                  placeholder="Note title..."
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="description" className="block text-sm font-mono mb-1 text-amber-900">
-                  Content
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={newTask.description}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-amber-50 border-b-2 border-amber-700 focus:border-amber-800 focus:outline-none transition-colors font-mono rounded-lg"
-                  rows="6"
-                  placeholder="Write your note here..."
-                  style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px", lineHeight: "24px"}}
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                className="w-full bg-amber-700 text-amber-100 py-3 px-4 rounded-lg border border-amber-900 hover:bg-amber-800 transition shadow-md font-mono"
-              >
-                Add Note
-              </button>
-            </form>
-          </div>
-          
-          {/* Task List - Right Column */}
+        <div className="grid grid-cols-1 gap-6">
+          {/* Task List */}
           <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
-            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono">
+            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono flex justify-between items-center">
               <h2 className="text-xl">
                 {userOrg ? `${userOrg} Notes` : 'Notes'}
               </h2>
+              <Link href="/main/new">
+                <button className="bg-amber-700 text-amber-100 py-2 px-4 rounded-lg border border-amber-900 hover:bg-amber-800 transition shadow-sm font-mono">
+                  + New Note
+                </button>
+              </Link>
             </div>
             
             <div className="p-4" style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px"}}>
