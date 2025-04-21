@@ -183,7 +183,7 @@ export default function OrganizationWall() {
           </div>
           <Link href="/main">
             <button className="bg-amber-700 hover:bg-amber-800 text-amber-100 px-4 py-2 rounded-lg border border-amber-600 font-mono transition shadow-sm">
-              Back to Notes
+              Back 
             </button>
           </Link>
         </div>
