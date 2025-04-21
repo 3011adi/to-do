@@ -9,6 +9,8 @@ export default function Home() {
   const [editFormData, setEditFormData] = useState({ title: "", description: "" });
   const [session, setSession] = useState(null);
   const [userOrg, setUserOrg] = useState(null);
+  const [aiSummary, setAiSummary] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   
   // Fetch user's organization name
   const fetchUserOrg = async (email) => {
@@ -155,6 +157,46 @@ export default function Home() {
     }
   };
   
+  const generateAISummary = async () => {
+    if (tasks.length === 0) {
+      alert("No notes available to summarize.");
+      return;
+    }
+    
+    setIsGeneratingSummary(true);
+    
+    try {
+      // Prepare text from all notes
+      const allNotesText = tasks.map(task => 
+        `Note: ${task.title}\n${task.description}`
+      ).join("\n\n");
+      
+      // Send to our AI summary endpoint
+      const response = await fetch('/api/generate-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          text: `Summarize these notes collectively:\n${allNotesText}` 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.summary) {
+        setAiSummary(data.summary);
+      } else {
+        throw new Error("Failed to generate summary");
+      }
+    } catch (error) {
+      console.error("Error generating collective summary:", error);
+      alert("Failed to generate summary. Please try again.");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+  
   return (
     <div className="bg-amber-50 min-h-screen p-4" style={{backgroundImage: "url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEGSURBVGhD7ZdBCsIwFEXTrrrXLQii4LLc/8YFqdZf6DiIQvO/9cDblCTtgZtpm/Sqqqqqqqqqqqo3zuPiG3SZX16XWdgZdJEXkXdEFMaJ9tZyMhRTOOmg5yCyQB+JLBipSAuO37xyJsPZI18R4YwsgJeRwXCqLzPy3N8+LlsYCqeGYiMX3sOlJ2ZGhpdmRkQBGrEMIgvQiJURUYBGLI2IAjRibUQUoBEfIy5yJMST6Dvzw3GQzciNJX1RjCXfkQcHr2oN+0wZE+B2aLDQjBg42IoYDG0NDBiL5FcZ5LHJuMvQQNKTMNpEyTvQOZgUGRmv+jTkXwVEFnBHRJHHicDhExBZQFVVVVVVVVW9KaVe9/iBnV2iJ3IAAAAASUVORK5CYII=')", backgroundRepeat: "repeat"}}>
       <div className="max-w-7xl mx-auto">
@@ -177,6 +219,41 @@ export default function Home() {
         </div>
         
         <div className="grid grid-cols-1 gap-6">
+          {/* AI Summary Section */}
+          <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+            <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono flex justify-between items-center">
+              <h2 className="text-xl">AI Summary</h2>
+              <button 
+                onClick={generateAISummary}
+                disabled={isGeneratingSummary || tasks.length === 0}
+                className={`px-4 py-2 rounded-lg font-mono ${
+                  isGeneratingSummary || tasks.length === 0 
+                    ? 'bg-amber-600/50 cursor-not-allowed' 
+                    : 'bg-amber-700 hover:bg-amber-800 border border-amber-900'
+                } transition`}
+              >
+                {isGeneratingSummary ? 'Generating...' : 'Generate Summary'}
+              </button>
+            </div>
+            
+            <div className="p-6" style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px"}}>
+              {aiSummary ? (
+                <div className="bg-amber-50 p-4 rounded-lg border-l-4 border-amber-600 font-mono">
+                  <h3 className="font-bold mb-2 text-amber-900">AI-Generated Overview:</h3>
+                  <p className="text-amber-800 whitespace-pre-line">{aiSummary}</p>
+                </div>
+              ) : (
+                <div className="text-center py-4 font-mono text-amber-700">
+                  {isGeneratingSummary ? (
+                    <p>Analyzing all your notes...</p>
+                  ) : (
+                    <p>Generate an AI summary to get an overview of all your notes</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          
           {/* Task List */}
           <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
             <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono flex justify-between items-center">

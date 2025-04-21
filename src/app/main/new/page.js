@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 export default function NewTask() {
   const [newTask, setNewTask] = useState({ title: "", description: "" });
   const [session, setSession] = useState(null);
+  const [summary, setSummary] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -31,7 +33,8 @@ export default function NewTask() {
     
     const taskWithEmail = {
       ...newTask,
-      email: session.user.email
+      email: session.user.email,
+      summary: summary // Include the AI summary if available
     };
 
     const { error } = await supabase.from("list").insert([taskWithEmail]);
@@ -50,6 +53,43 @@ export default function NewTask() {
       ...prev,
       [name]: value
     }));
+    // Clear summary when content changes
+    if (name === "description" && summary) {
+      setSummary("");
+    }
+  };
+
+  const generateSummary = async () => {
+    if (!newTask.description.trim()) {
+      alert("Please add some content before generating a summary.");
+      return;
+    }
+    
+    setIsGeneratingSummary(true);
+    
+    try {
+      // Call to your backend API that interfaces with Gemini
+      const response = await fetch('/api/generate-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: newTask.description }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.summary) {
+        setSummary(data.summary);
+      } else {
+        throw new Error("Failed to generate summary");
+      }
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      alert("Failed to generate summary. Please try again.");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
   };
   
   return (
@@ -111,6 +151,41 @@ export default function NewTask() {
                 placeholder="Write your note here..."
                 style={{backgroundImage: "linear-gradient(to bottom, rgba(245, 158, 11, 0.05) 1px, transparent 1px)", backgroundSize: "100% 24px", lineHeight: "24px"}}
               />
+            </div>
+            
+            {/* AI Summary Section */}
+            <div className="border-t border-amber-200 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-mono text-amber-900">
+                  AI Summary
+                </label>
+                <button
+                  type="button"
+                  onClick={generateSummary}
+                  disabled={isGeneratingSummary || !newTask.description.trim()}
+                  className={`px-3 py-1 text-sm rounded-lg font-mono transition ${
+                    isGeneratingSummary || !newTask.description.trim() 
+                      ? 'bg-amber-200 text-amber-500 cursor-not-allowed' 
+                      : 'bg-amber-600 text-amber-100 hover:bg-amber-700'
+                  }`}
+                >
+                  {isGeneratingSummary ? 'Generating...' : 'Generate Summary'}
+                </button>
+              </div>
+              
+              <div className={`bg-amber-50 border-l-4 p-3 rounded-lg transition-all ${
+                summary ? 'border-amber-600' : 'border-amber-200'
+              }`}>
+                {summary ? (
+                  <p className="font-mono text-amber-900">{summary}</p>
+                ) : (
+                  <p className="text-amber-500 italic font-mono text-sm">
+                    {isGeneratingSummary 
+                      ? "Working on your summary..." 
+                      : "Generate a summary to quickly capture the key points of your note."}
+                  </p>
+                )}
+              </div>
             </div>
             
             <div className="flex space-x-4">
