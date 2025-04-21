@@ -202,7 +202,14 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Notebook-style header */}
         <div className="flex items-center justify-between mb-6 bg-amber-900 p-4 rounded-xl border-l-8 border-amber-700 shadow-md">
-          <h1 className="text-2xl font-mono text-amber-100">Task Notebook</h1>
+          <div className="flex items-center">
+            <h1 className="text-2xl font-mono text-amber-100">Task Notebook</h1>
+            {tasks.length > 0 && (
+              <span className="ml-3 bg-amber-800 text-amber-100 px-3 py-1 rounded-full border border-amber-600 text-sm font-mono">
+                {tasks.length} total {tasks.length === 1 ? 'note' : 'notes'}
+              </span>
+            )}
+          </div>
           
           {session?.user?.email && (
             <div className="text-right">
@@ -218,9 +225,9 @@ export default function Home() {
           )}
         </div>
         
-        <div className="grid grid-cols-1 gap-6">
-          {/* AI Summary Section */}
-          <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* AI Summary Section - Now takes 1 column on desktop */}
+          <div className="md:col-span-1 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
             <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono flex justify-between items-center">
               <h2 className="text-xl">AI Summary</h2>
               <button 
@@ -254,11 +261,12 @@ export default function Home() {
             </div>
           </div>
           
-          {/* Task List */}
-          <div className="bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
+          {/* Task List - Now takes 2 columns on desktop */}
+          <div className="md:col-span-2 bg-amber-100 rounded-xl border-l-4 border-amber-700 shadow-md overflow-hidden">
             <div className="p-4 bg-amber-800 text-amber-100 border-b border-amber-900 font-mono flex justify-between items-center">
               <h2 className="text-xl">
-                {userOrg ? `${userOrg} Notes` : 'Notes'}
+                {userOrg ? `${userOrg} Notes` : 'Notes'} 
+                <span className="text-amber-200 text-sm ml-2">({tasks.length})</span>
               </h2>
               <Link href="/main/new">
                 <button className="bg-amber-700 text-amber-100 py-2 px-4 rounded-lg border border-amber-900 hover:bg-amber-800 transition shadow-sm font-mono">
